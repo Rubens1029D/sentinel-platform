@@ -53,10 +53,11 @@ export default function RegisterScreen() {
     }
 
     // En el siguiente incremento enviaremos estos datos a la API.
-    console.log({
-      name: name.trim(),
-      email: email.trim().toLowerCase(),
-    });
+   // console.log({
+     // name: name.trim(),
+      //email: email.trim().toLowerCase(),
+   // });
+    router.replace('/profile');
   };
 
   return (
