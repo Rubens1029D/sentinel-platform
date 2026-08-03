@@ -33,3 +33,8 @@ pnpm-debug.log*
 # IDE
 .idea/
 .vscode/
+
+
+# Cursor / Kiro
+.k1/
+.cursor-cache/
