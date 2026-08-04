@@ -3,6 +3,9 @@ import { ConfigModule } from '@nestjs/config';
 import * as Joi from 'joi';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { DatabaseModule } from './database/database.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { UsersModule } from './modules/users/users.module';
 
 @Module({
   imports: [
@@ -15,12 +18,18 @@ import { AppService } from './app.service';
           .default('development'),
         PORT: Joi.number().port().default(3000),
         API_PREFIX: Joi.string().default('api/v1'),
+        DATABASE_URL: Joi.string().required(),
+        JWT_SECRET: Joi.string().min(32).required(),
+        JWT_EXPIRES_IN: Joi.string().default('15m'),
       }),
       validationOptions: {
         allowUnknown: true,
         abortEarly: false,
       },
     }),
+    DatabaseModule,
+    UsersModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
