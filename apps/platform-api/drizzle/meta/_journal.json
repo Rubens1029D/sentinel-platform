@@ -15,6 +15,13 @@
       "when": 1785866502151,
       "tag": "0001_add_user_display_name",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785868569184,
+      "tag": "0002_create_profiles",
+      "breakpoints": true
     }
   ]
 }
