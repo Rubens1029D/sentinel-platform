@@ -38,3 +38,8 @@ pnpm-debug.log*
 # Cursor / Kiro
 .k1/
 .cursor-cache/
+
+# Environment files
+.env
+.env.*
+!.env.example
