@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq } from 'drizzle-orm';
 import { DATABASE_CONNECTION } from '../../../database/database.constants';
 import type { SentinelDatabase } from '../../../database/database.types';
 import {
@@ -220,6 +220,68 @@ export class TrainingRepository {
       .returning();
 
     return plan;
+  }
+
+  findPlanHistoryByUserId(userId: string) {
+    return this.db
+      .select()
+      .from(trainingPlans)
+      .where(
+        and(
+          eq(trainingPlans.userId, userId),
+          eq(trainingPlans.status, 'completed'),
+        ),
+      )
+      .orderBy(desc(trainingPlans.endDate));
+  }
+
+  async findPlanByIdForUser(planId: string, userId: string) {
+    const [plan] = await this.db
+      .select()
+      .from(trainingPlans)
+      .where(
+        and(eq(trainingPlans.id, planId), eq(trainingPlans.userId, userId)),
+      )
+      .limit(1);
+
+    return plan;
+  }
+
+  async findAllPlansByUserId(userId: string) {
+    return this.db
+      .select()
+      .from(trainingPlans)
+      .where(eq(trainingPlans.userId, userId));
+  }
+
+  async findSessionsForUser(userId: string) {
+    return this.db
+      .select({
+        session: trainingSessions,
+      })
+      .from(trainingSessions)
+      .innerJoin(
+        trainingPlans,
+        eq(trainingSessions.trainingPlanId, trainingPlans.id),
+      )
+      .where(eq(trainingPlans.userId, userId));
+  }
+
+  async findExerciseAssignmentsForUser(userId: string) {
+    return this.db
+      .select({
+        assignment: trainingSessionExercises,
+      })
+      .from(trainingSessionExercises)
+      .innerJoin(
+        trainingSessions,
+        eq(trainingSessionExercises.trainingSessionId, trainingSessions.id),
+      )
+      .innerJoin(
+        trainingPlans,
+        eq(trainingSessions.trainingPlanId, trainingPlans.id),
+      )
+      .where(eq(trainingPlans.userId, userId));
   }
 
   transaction<T>(

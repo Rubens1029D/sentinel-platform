@@ -268,6 +268,61 @@ export class TrainingService {
     return exercise;
   }
 
+  async getHistoryForUser(userId: string) {
+    const plans = await this.trainingRepository.findPlanHistoryByUserId(userId);
+
+    return plans;
+  }
+
+  async getHistoryDetailForUser(
+    userId: string,
+    planId: string,
+  ): Promise<CurrentTrainingPlan> {
+    const plan = await this.trainingRepository.findPlanByIdForUser(
+      planId,
+      userId,
+    );
+
+    if (!plan) {
+      throw new NotFoundException('Training plan was not found');
+    }
+
+    const sessions = await this.trainingRepository.findSessionsByPlanId(
+      plan.id,
+    );
+
+    const sessionsWithExercises = await Promise.all(
+      sessions.map(async (session) => {
+        const sessionExercises =
+          await this.trainingRepository.findExercisesBySessionId(session.id);
+
+        return {
+          id: session.id,
+          dayNumber: session.dayNumber,
+          scheduledDate: session.scheduledDate,
+          title: session.title,
+          objective: session.objective,
+          durationMinutes: session.durationMinutes,
+          difficulty: session.difficulty,
+          status: session.status,
+          safetyNotes: session.safetyNotes,
+          exercises: sessionExercises,
+        };
+      }),
+    );
+
+    return {
+      id: plan.id,
+      name: plan.name,
+      status: plan.status,
+      startDate: plan.startDate,
+      endDate: plan.endDate,
+      generationReason: plan.generationReason,
+      metadata: plan.metadata,
+      sessions: sessionsWithExercises,
+    };
+  }
+
   private async loadGenerationContext(userId: string) {
     const profile = await this.trainingRepository.findProfileByUserId(userId);
 
@@ -286,6 +341,73 @@ export class TrainingService {
     return {
       profile,
       exerciseCatalog,
+    };
+  }
+
+  async getProgressForUser(userId: string) {
+    const [plans, sessionRows, exerciseRows] = await Promise.all([
+      this.trainingRepository.findAllPlansByUserId(userId),
+      this.trainingRepository.findSessionsForUser(userId),
+      this.trainingRepository.findExerciseAssignmentsForUser(userId),
+    ]);
+
+    const sessions = sessionRows.map((row) => row.session);
+
+    const exercises = exerciseRows.map((row) => row.assignment);
+
+    const completedPlans = plans.filter(
+      (plan) => plan.status === 'completed',
+    ).length;
+
+    const completedSessions = sessions.filter(
+      (session) => session.status === 'completed',
+    );
+
+    const completedSessionDates = completedSessions
+      .map((session) => session.completedAt)
+      .filter((date): date is Date => date !== null);
+
+    const { currentStreak, longestStreak } = this.calculateStreaks(
+      completedSessionDates,
+    );
+
+    const recentSessions = completedSessions
+      .filter((session) => session.completedAt !== null)
+      .sort(
+        (a, b) =>
+          (b.completedAt?.getTime() ?? 0) - (a.completedAt?.getTime() ?? 0),
+      )
+      .slice(0, 5)
+      .map((session) => ({
+        id: session.id,
+        title: session.title,
+        completedAt: session.completedAt,
+        durationMinutes: session.durationMinutes,
+      }));
+
+    const completedExercises = exercises.filter(
+      (exercise) => exercise.completed,
+    ).length;
+
+    const totalTrainingMinutes = completedSessions.reduce(
+      (total, session) => total + session.durationMinutes,
+      0,
+    );
+
+    const completionRate =
+      sessions.length === 0
+        ? 0
+        : Math.round((completedSessions.length / sessions.length) * 100);
+
+    return {
+      completedPlans,
+      completedSessions: completedSessions.length,
+      completedExercises,
+      totalTrainingMinutes,
+      completionRate,
+      currentStreak,
+      longestStreak,
+      recentSessions,
     };
   }
 
@@ -402,6 +524,79 @@ export class TrainingService {
       eq(trainingPlans.userId, userId),
       eq(trainingPlans.status, 'active'),
     );
+  }
+
+  private calculateStreaks(completedDates: Date[]): {
+    currentStreak: number;
+    longestStreak: number;
+  } {
+    const uniqueDays = Array.from(
+      new Set(completedDates.map((date) => date.toISOString().slice(0, 10))),
+    )
+      .sort()
+      .map((date) => new Date(`${date}T00:00:00Z`));
+
+    if (uniqueDays.length === 0) {
+      return {
+        currentStreak: 0,
+        longestStreak: 0,
+      };
+    }
+
+    let longestStreak = 1;
+    let runningStreak = 1;
+
+    for (let index = 1; index < uniqueDays.length; index += 1) {
+      const previous = uniqueDays[index - 1];
+      const current = uniqueDays[index];
+
+      const differenceInDays = Math.round(
+        (current.getTime() - previous.getTime()) / (1000 * 60 * 60 * 24),
+      );
+
+      if (differenceInDays === 1) {
+        runningStreak += 1;
+        longestStreak = Math.max(longestStreak, runningStreak);
+      } else {
+        runningStreak = 1;
+      }
+    }
+
+    const today = new Date();
+    const todayDate = new Date(`${today.toISOString().slice(0, 10)}T00:00:00Z`);
+
+    const lastCompletedDay = uniqueDays[uniqueDays.length - 1];
+
+    const daysSinceLastCompletion = Math.round(
+      (todayDate.getTime() - lastCompletedDay.getTime()) /
+        (1000 * 60 * 60 * 24),
+    );
+
+    let currentStreak = 0;
+
+    if (daysSinceLastCompletion === 0 || daysSinceLastCompletion === 1) {
+      currentStreak = 1;
+
+      for (let index = uniqueDays.length - 1; index > 0; index -= 1) {
+        const current = uniqueDays[index];
+        const previous = uniqueDays[index - 1];
+
+        const differenceInDays = Math.round(
+          (current.getTime() - previous.getTime()) / (1000 * 60 * 60 * 24),
+        );
+
+        if (differenceInDays !== 1) {
+          break;
+        }
+
+        currentStreak += 1;
+      }
+    }
+
+    return {
+      currentStreak,
+      longestStreak,
+    };
   }
 
   private addDays(date: Date, days: number): Date {

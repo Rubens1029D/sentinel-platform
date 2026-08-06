@@ -33,6 +33,54 @@ import type { TrainingPlanBlueprint } from './types/training-engine.types';
 export class TrainingController {
   constructor(private readonly trainingService: TrainingService) {}
 
+  @Get('progress')
+  @ApiOperation({
+    summary: 'Get authenticated user training progress',
+  })
+  @ApiOkResponse({
+    description: 'Training progress returned successfully',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Missing or invalid token',
+  })
+  progress(@Req() request: AuthenticatedRequest) {
+    return this.trainingService.getProgressForUser(request.user.id);
+  }
+
+  @Get('history/:planId')
+  @ApiOperation({
+    summary: 'Get a completed training plan detail',
+  })
+  @ApiOkResponse({
+    description: 'Training plan detail returned successfully',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Missing or invalid token',
+  })
+  historyDetail(
+    @Req() request: AuthenticatedRequest,
+    @Param('planId') planId: string,
+  ) {
+    return this.trainingService.getHistoryDetailForUser(
+      request.user.id,
+      planId,
+    );
+  }
+
+  @Get('history')
+  @ApiOperation({
+    summary: 'Get completed training plan history',
+  })
+  @ApiOkResponse({
+    description: 'Training plan history returned successfully',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Missing or invalid token',
+  })
+  history(@Req() request: AuthenticatedRequest) {
+    return this.trainingService.getHistoryForUser(request.user.id);
+  }
+
   @Get('current')
   @ApiOperation({
     summary: 'Get the authenticated user active training plan',
