@@ -1,5 +1,9 @@
 import { and, eq } from 'drizzle-orm';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   //exercises,
   trainingPlans,
@@ -7,6 +11,7 @@ import {
   trainingSessions,
 } from '../../database/schema';
 import { generateTrainingPlan } from './engine/rule-training-engine';
+import { CompleteExerciseDto } from './dto/complete-exercise.dto';
 import { TrainingRepository } from './repositories/training.repository';
 import type {
   TrainingPlanBlueprint,
@@ -203,6 +208,66 @@ export class TrainingService {
     };
   }
 
+  async completeExerciseForUser(
+    userId: string,
+    assignmentId: string,
+    dto: CompleteExerciseDto,
+  ) {
+    const result = await this.trainingRepository.findExerciseAssignment(
+      assignmentId,
+      userId,
+    );
+
+    if (!result) {
+      throw new NotFoundException('Training exercise was not found');
+    }
+
+    if (result.plan.status !== 'active') {
+      throw new BadRequestException('The training plan is not active');
+    }
+
+    if (result.session.status !== 'in-progress') {
+      throw new BadRequestException('The training session must be in progress');
+    }
+
+    if (result.assignment.completed) {
+      return result.assignment;
+    }
+
+    const exercise = await this.trainingRepository.completeExercise(
+      assignmentId,
+      dto,
+    );
+
+    if (!exercise) {
+      throw new Error('Training exercise could not be completed');
+    }
+
+    const exercises = await this.trainingRepository.listSessionExercises(
+      result.session.id,
+    );
+
+    const pendingExercises = exercises.filter((item) => !item.completed);
+
+    if (pendingExercises.length === 0) {
+      await this.trainingRepository.completeSession(result.session.id);
+
+      const sessions = await this.trainingRepository.listPlanSessions(
+        result.plan.id,
+      );
+
+      const pendingSessions = sessions.filter(
+        (item) => item.status !== 'completed',
+      );
+
+      if (pendingSessions.length === 0) {
+        await this.trainingRepository.completePlan(result.plan.id);
+      }
+    }
+
+    return exercise;
+  }
+
   private async loadGenerationContext(userId: string) {
     const profile = await this.trainingRepository.findProfileByUserId(userId);
 
@@ -291,6 +356,45 @@ export class TrainingService {
         notes: item.notes,
       })),
     };
+  }
+
+  async startSessionForUser(userId: string, sessionId: string) {
+    const result = await this.trainingRepository.findSessionForUser(
+      sessionId,
+      userId,
+    );
+
+    if (!result) {
+      throw new NotFoundException('Training session was not found');
+    }
+
+    if (result.plan.status !== 'active') {
+      throw new BadRequestException('The training plan is not active');
+    }
+
+    if (result.session.status === 'completed') {
+      throw new BadRequestException(
+        'The training session is already completed',
+      );
+    }
+
+    if (result.session.status === 'skipped') {
+      throw new BadRequestException(
+        'A skipped training session cannot be started',
+      );
+    }
+
+    if (result.session.status === 'in-progress') {
+      return result.session;
+    }
+
+    const session = await this.trainingRepository.startSession(sessionId);
+
+    if (!session) {
+      throw new Error('Training session could not be started');
+    }
+
+    return session;
   }
 
   private buildActivePlanCondition(userId: string) {

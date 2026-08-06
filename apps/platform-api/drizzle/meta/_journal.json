@@ -36,6 +36,13 @@
       "when": 1786031533935,
       "tag": "0004_create_training_plans",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786042820739,
+      "tag": "0005_training_progress",
+      "breakpoints": true
     }
   ]
 }
