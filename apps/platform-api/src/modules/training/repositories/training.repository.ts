@@ -99,6 +99,129 @@ export class TrainingRepository {
       .orderBy(asc(trainingSessionExercises.position));
   }
 
+  async findSessionForUser(sessionId: string, userId: string) {
+    const [result] = await this.db
+      .select({
+        session: trainingSessions,
+        plan: trainingPlans,
+      })
+      .from(trainingSessions)
+      .innerJoin(
+        trainingPlans,
+        eq(trainingSessions.trainingPlanId, trainingPlans.id),
+      )
+      .where(
+        and(
+          eq(trainingSessions.id, sessionId),
+          eq(trainingPlans.userId, userId),
+        ),
+      )
+      .limit(1);
+
+    return result;
+  }
+
+  async startSession(sessionId: string) {
+    const [session] = await this.db
+      .update(trainingSessions)
+      .set({
+        status: 'in-progress',
+        startedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(trainingSessions.id, sessionId))
+      .returning();
+
+    return session;
+  }
+
+  async findExerciseAssignment(assignmentId: string, userId: string) {
+    const [result] = await this.db
+      .select({
+        assignment: trainingSessionExercises,
+        session: trainingSessions,
+        plan: trainingPlans,
+      })
+      .from(trainingSessionExercises)
+      .innerJoin(
+        trainingSessions,
+        eq(trainingSessionExercises.trainingSessionId, trainingSessions.id),
+      )
+      .innerJoin(
+        trainingPlans,
+        eq(trainingSessions.trainingPlanId, trainingPlans.id),
+      )
+      .where(
+        and(
+          eq(trainingSessionExercises.id, assignmentId),
+          eq(trainingPlans.userId, userId),
+        ),
+      )
+      .limit(1);
+
+    return result;
+  }
+
+  async completeExercise(
+    assignmentId: string,
+    data: {
+      actualRepetitions?: number;
+      actualDurationSeconds?: number;
+    },
+  ) {
+    const [exercise] = await this.db
+      .update(trainingSessionExercises)
+      .set({
+        completed: true,
+        completedAt: new Date(),
+        actualRepetitions: data.actualRepetitions,
+        actualDurationSeconds: data.actualDurationSeconds,
+      })
+      .where(eq(trainingSessionExercises.id, assignmentId))
+      .returning();
+
+    return exercise;
+  }
+
+  async listSessionExercises(sessionId: string) {
+    return this.db.query.trainingSessionExercises.findMany({
+      where: eq(trainingSessionExercises.trainingSessionId, sessionId),
+    });
+  }
+
+  async completeSession(sessionId: string) {
+    const [session] = await this.db
+      .update(trainingSessions)
+      .set({
+        status: 'completed',
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(trainingSessions.id, sessionId))
+      .returning();
+
+    return session;
+  }
+
+  async listPlanSessions(planId: string) {
+    return this.db.query.trainingSessions.findMany({
+      where: eq(trainingSessions.trainingPlanId, planId),
+    });
+  }
+
+  async completePlan(planId: string) {
+    const [plan] = await this.db
+      .update(trainingPlans)
+      .set({
+        status: 'completed',
+        updatedAt: new Date(),
+      })
+      .where(eq(trainingPlans.id, planId))
+      .returning();
+
+    return plan;
+  }
+
   transaction<T>(
     callback: Parameters<SentinelDatabase['transaction']>[0],
   ): Promise<T> {

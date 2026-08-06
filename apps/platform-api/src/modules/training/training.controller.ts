@@ -1,4 +1,13 @@
-import { Controller, Post, Get, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -9,6 +18,7 @@ import {
 } from '@nestjs/swagger';
 import type { AuthenticatedRequest } from '../auth/auth.types';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CompleteExerciseDto } from './dto/complete-exercise.dto';
 import {
   TrainingService,
   type CurrentTrainingPlan,
@@ -67,5 +77,44 @@ export class TrainingController {
     @Req() request: AuthenticatedRequest,
   ): Promise<GeneratedTrainingPlan> {
     return this.trainingService.generateForUser(request.user.id);
+  }
+
+  @Patch('session/:id/start')
+  @ApiOperation({
+    summary: 'Start a training session',
+  })
+  @ApiOkResponse({
+    description: 'Training session started successfully',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Missing or invalid token',
+  })
+  startSession(
+    @Req() request: AuthenticatedRequest,
+    @Param('id') sessionId: string,
+  ) {
+    return this.trainingService.startSessionForUser(request.user.id, sessionId);
+  }
+
+  @Patch('exercise/:id/complete')
+  @ApiOperation({
+    summary: 'Complete a training exercise',
+  })
+  @ApiOkResponse({
+    description: 'Training exercise completed successfully',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Missing or invalid token',
+  })
+  completeExercise(
+    @Req() request: AuthenticatedRequest,
+    @Param('id') assignmentId: string,
+    @Body() dto: CompleteExerciseDto,
+  ) {
+    return this.trainingService.completeExerciseForUser(
+      request.user.id,
+      assignmentId,
+      dto,
+    );
   }
 }

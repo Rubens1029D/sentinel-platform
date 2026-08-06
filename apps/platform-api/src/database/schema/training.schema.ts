@@ -1,4 +1,5 @@
 import {
+  boolean,
   date,
   integer,
   jsonb,
@@ -99,6 +100,14 @@ export const trainingSessions = pgTable(
 
     safetyNotes: jsonb('safety_notes').$type<string[]>().notNull().default([]),
 
+    startedAt: timestamp('started_at', {
+      withTimezone: true,
+    }),
+
+    completedAt: timestamp('completed_at', {
+      withTimezone: true,
+    }),
+
     createdAt: timestamp('created_at', {
       withTimezone: true,
     })
@@ -147,6 +156,16 @@ export const trainingSessionExercises = pgTable(
     restSeconds: integer('rest_seconds').notNull(),
 
     notes: text('notes'),
+
+    completed: boolean('completed').notNull().default(false),
+
+    completedAt: timestamp('completed_at', {
+      withTimezone: true,
+    }),
+
+    actualRepetitions: integer('actual_repetitions'),
+
+    actualDurationSeconds: integer('actual_duration_seconds'),
 
     createdAt: timestamp('created_at', {
       withTimezone: true,
