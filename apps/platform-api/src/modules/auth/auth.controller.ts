@@ -26,6 +26,7 @@ import type { AuthenticatedRequest } from './auth.types';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -33,6 +34,12 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
+  @Throttle({
+    default: {
+      limit: 5,
+      ttl: 60_000,
+    },
+  })
   @ApiOperation({ summary: 'Register a new Sentinel user' })
   @ApiCreatedResponse({ description: 'User registered successfully' })
   @ApiConflictResponse({ description: 'Email already registered' })
@@ -41,6 +48,12 @@ export class AuthController {
   }
 
   @Post('login')
+  @Throttle({
+    default: {
+      limit: 5,
+      ttl: 60_000,
+    },
+  })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Authenticate a Sentinel user' })
   @ApiOkResponse({ description: 'Authentication successful' })

@@ -10,6 +10,9 @@ import { TrainingModule } from './modules/training/training.module';
 import { UsersModule } from './modules/users/users.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { HealthModule } from './modules/health/health.module';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
   imports: [
@@ -18,13 +21,14 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
       envFilePath: ['apps/platform-api/.env', '.env'],
       validationSchema: Joi.object({
         NODE_ENV: Joi.string()
-          .valid('development', 'test', 'production')
+          .valid('development', 'test', 'staging', 'production')
           .default('development'),
         PORT: Joi.number().port().default(3000),
         API_PREFIX: Joi.string().default('api/v1'),
-        DATABASE_URL: Joi.string().required(),
+        DATABASE_URL: Joi.string().uri().required(),
         JWT_SECRET: Joi.string().min(32).required(),
         JWT_EXPIRES_IN: Joi.string().default('15m'),
+        CORS_ORIGIN: Joi.string().default('http://localhost:3000'),
       }),
       validationOptions: {
         allowUnknown: true,
@@ -38,8 +42,22 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     DashboardModule,
     TrainingModule,
     NotificationsModule,
+    HealthModule,
+    ThrottlerModule.forRoot([
+      {
+        name: 'default',
+        ttl: 60_000,
+        limit: 100,
+      },
+    ]),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}
