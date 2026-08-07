@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, lte } from 'drizzle-orm';
 import { DATABASE_CONNECTION } from '../../../database/database.constants';
 import type { SentinelDatabase } from '../../../database/database.types';
 import {
@@ -282,6 +282,30 @@ export class TrainingRepository {
         eq(trainingSessions.trainingPlanId, trainingPlans.id),
       )
       .where(eq(trainingPlans.userId, userId));
+  }
+
+  async findSessionsForUserByDateRange(
+    userId: string,
+    startDate: string,
+    endDate: string,
+  ) {
+    return this.db
+      .select({
+        session: trainingSessions,
+      })
+      .from(trainingSessions)
+      .innerJoin(
+        trainingPlans,
+        eq(trainingSessions.trainingPlanId, trainingPlans.id),
+      )
+      .where(
+        and(
+          eq(trainingPlans.userId, userId),
+          gte(trainingSessions.scheduledDate, startDate),
+          lte(trainingSessions.scheduledDate, endDate),
+        ),
+      )
+      .orderBy(asc(trainingSessions.scheduledDate));
   }
 
   transaction<T>(
