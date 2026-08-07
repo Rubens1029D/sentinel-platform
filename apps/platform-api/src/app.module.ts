@@ -9,6 +9,7 @@ import { ProfileModule } from './modules/profile/profile.module';
 import { TrainingModule } from './modules/training/training.module';
 import { UsersModule } from './modules/users/users.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     ProfileModule,
     DashboardModule,
     TrainingModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
