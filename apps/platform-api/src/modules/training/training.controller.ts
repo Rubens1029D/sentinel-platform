@@ -33,6 +33,34 @@ import type { TrainingPlanBlueprint } from './types/training-engine.types';
 export class TrainingController {
   constructor(private readonly trainingService: TrainingService) {}
 
+  @Get('stats/monthly')
+  @ApiOperation({
+    summary: 'Get monthly training statistics',
+  })
+  @ApiOkResponse({
+    description: 'Monthly training statistics returned successfully',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Missing or invalid token',
+  })
+  monthlyStats(@Req() request: AuthenticatedRequest) {
+    return this.trainingService.getMonthlyStatsForUser(request.user.id);
+  }
+
+  @Get('stats/weekly')
+  @ApiOperation({
+    summary: 'Get weekly training statistics',
+  })
+  @ApiOkResponse({
+    description: 'Weekly training statistics returned successfully',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Missing or invalid token',
+  })
+  weeklyStats(@Req() request: AuthenticatedRequest) {
+    return this.trainingService.getWeeklyStatsForUser(request.user.id);
+  }
+
   @Get('progress')
   @ApiOperation({
     summary: 'Get authenticated user training progress',

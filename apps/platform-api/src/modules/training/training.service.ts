@@ -599,6 +599,227 @@ export class TrainingService {
     };
   }
 
+  async getWeeklyStatsForUser(userId: string) {
+    const today = new Date();
+
+    const currentDay = today.getUTCDay();
+    const distanceFromMonday = currentDay === 0 ? 6 : currentDay - 1;
+
+    const startDateObject = new Date(today);
+    startDateObject.setUTCDate(today.getUTCDate() - distanceFromMonday);
+    startDateObject.setUTCHours(0, 0, 0, 0);
+
+    const endDateObject = new Date(startDateObject);
+    endDateObject.setUTCDate(startDateObject.getUTCDate() + 6);
+    endDateObject.setUTCHours(23, 59, 59, 999);
+
+    const startDate = startDateObject.toISOString().slice(0, 10);
+
+    const endDate = endDateObject.toISOString().slice(0, 10);
+
+    const sessionRows =
+      await this.trainingRepository.findSessionsForUserByDateRange(
+        userId,
+        startDate,
+        endDate,
+      );
+
+    const sessions = sessionRows.map((row) => row.session);
+
+    const completedSessions = sessions.filter(
+      (session) => session.status === 'completed',
+    );
+
+    const trainingMinutes = completedSessions.reduce(
+      (total, session) => total + session.durationMinutes,
+      0,
+    );
+
+    const completedSessionIds = new Set(
+      completedSessions.map((session) => session.id),
+    );
+
+    const exerciseRows =
+      await this.trainingRepository.findExerciseAssignmentsForUser(userId);
+
+    const completedExercises = exerciseRows.filter(
+      (row) =>
+        row.assignment.completed &&
+        completedSessionIds.has(row.assignment.trainingSessionId),
+    ).length;
+
+    const activeDays = new Set(
+      completedSessions
+        .map((session) => session.completedAt)
+        .filter((date): date is Date => date !== null)
+        .map((date) => date.toISOString().slice(0, 10)),
+    ).size;
+
+    const days = Array.from(
+      {
+        length: 7,
+      },
+      (_, index) => {
+        const date = new Date(startDateObject);
+
+        date.setUTCDate(startDateObject.getUTCDate() + index);
+
+        const dateString = date.toISOString().slice(0, 10);
+
+        const sessionsForDay = completedSessions.filter(
+          (session) =>
+            session.completedAt?.toISOString().slice(0, 10) === dateString,
+        );
+
+        return {
+          date: dateString,
+          completedSessions: sessionsForDay.length,
+          trainingMinutes: sessionsForDay.reduce(
+            (total, session) => total + session.durationMinutes,
+            0,
+          ),
+        };
+      },
+    );
+
+    return {
+      period: {
+        startDate,
+        endDate,
+      },
+      completedSessions: completedSessions.length,
+      trainingMinutes,
+      completedExercises,
+      activeDays,
+      days,
+    };
+  }
+
+  async getMonthlyStatsForUser(userId: string) {
+    const today = new Date();
+
+    const startDateObject = new Date(
+      Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1),
+    );
+
+    const endDateObject = new Date(
+      Date.UTC(
+        today.getUTCFullYear(),
+        today.getUTCMonth() + 1,
+        0,
+        23,
+        59,
+        59,
+        999,
+      ),
+    );
+
+    const startDate = startDateObject.toISOString().slice(0, 10);
+
+    const endDate = endDateObject.toISOString().slice(0, 10);
+
+    const sessionRows =
+      await this.trainingRepository.findSessionsForUserByDateRange(
+        userId,
+        startDate,
+        endDate,
+      );
+
+    const sessions = sessionRows.map((row) => row.session);
+
+    const completedSessions = sessions.filter(
+      (session) => session.status === 'completed',
+    );
+
+    const trainingMinutes = completedSessions.reduce(
+      (total, session) => total + session.durationMinutes,
+      0,
+    );
+
+    const completedSessionIds = new Set(
+      completedSessions.map((session) => session.id),
+    );
+
+    const exerciseRows =
+      await this.trainingRepository.findExerciseAssignmentsForUser(userId);
+
+    const completedExercises = exerciseRows.filter(
+      (row) =>
+        row.assignment.completed &&
+        completedSessionIds.has(row.assignment.trainingSessionId),
+    ).length;
+
+    const activeDays = new Set(
+      completedSessions
+        .map((session) => session.completedAt)
+        .filter((date): date is Date => date !== null)
+        .map((date) => date.toISOString().slice(0, 10)),
+    ).size;
+
+    const weeks = Array.from({ length: 6 }, (_, index) => {
+      const weekStart = new Date(startDateObject);
+
+      weekStart.setUTCDate(startDateObject.getUTCDate() + index * 7);
+
+      const weekEnd = new Date(weekStart);
+
+      weekEnd.setUTCDate(weekStart.getUTCDate() + 6);
+
+      const effectiveWeekEnd =
+        weekEnd > endDateObject ? endDateObject : weekEnd;
+
+      if (weekStart > endDateObject) {
+        return null;
+      }
+
+      const weekSessions = completedSessions.filter((session) => {
+        if (!session.completedAt) {
+          return false;
+        }
+
+        const completedAt = session.completedAt.getTime();
+
+        return (
+          completedAt >= weekStart.getTime() &&
+          completedAt <= effectiveWeekEnd.getTime()
+        );
+      });
+
+      return {
+        week: index + 1,
+        startDate: weekStart.toISOString().slice(0, 10),
+        endDate: effectiveWeekEnd.toISOString().slice(0, 10),
+        completedSessions: weekSessions.length,
+        trainingMinutes: weekSessions.reduce(
+          (total, session) => total + session.durationMinutes,
+          0,
+        ),
+      };
+    }).filter(
+      (
+        week,
+      ): week is {
+        week: number;
+        startDate: string;
+        endDate: string;
+        completedSessions: number;
+        trainingMinutes: number;
+      } => week !== null,
+    );
+
+    return {
+      period: {
+        startDate,
+        endDate,
+      },
+      completedSessions: completedSessions.length,
+      trainingMinutes,
+      completedExercises,
+      activeDays,
+      weeks,
+    };
+  }
+
   private addDays(date: Date, days: number): Date {
     const result = new Date(date);
     result.setDate(result.getDate() + days);
