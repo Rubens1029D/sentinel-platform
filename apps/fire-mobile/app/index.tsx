@@ -1,6 +1,3 @@
-import { BrandHeader } from '@/components/ui/BrandHeader';
-import { PrimaryButton } from '@/components/ui/PrimaryButton';
-import { colors } from '@/theme/colors';
 import { router } from 'expo-router';
 import {
   SafeAreaView,
@@ -9,14 +6,77 @@ import {
   View,
 } from 'react-native';
 
+import { BrandHeader } from '@/components/ui/BrandHeader';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import {
+  logout,
+  useAuthStore,
+} from '@/stores/auth-store';
+import { colors } from '@/theme/colors';
+
 export default function WelcomeScreen() {
+  const { user } = useAuthStore();
+
+  const handleLogout = async () => {
+    await logout();
+  };
+
+  if (user) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          <BrandHeader />
+
+          <View style={styles.content}>
+            <Text style={styles.eyebrow}>
+              SESIÓN ACTIVA
+            </Text>
+
+            <Text style={styles.title}>
+              Hola, {user.name}
+            </Text>
+
+            <Text style={styles.subtitle}>
+              Tu sesión se restauró correctamente.
+            </Text>
+
+            <Text style={styles.description}>
+              {user.email}
+            </Text>
+          </View>
+
+          <View style={styles.actions}>
+            <PrimaryButton
+              label="Continuar"
+              onPress={() =>
+                router.push('/profile')
+              }
+            />
+
+            <Text
+              accessibilityRole="button"
+              onPress={() => {
+                void handleLogout();
+              }}
+              style={styles.logout}
+            >
+              Cerrar sesión
+            </Text>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <BrandHeader />
 
         <View style={styles.content}>
-          <Text style={styles.eyebrow}>PREPARACIÓN OPERATIVA</Text>
+          <Text style={styles.eyebrow}>
+            PREPARACIÓN OPERATIVA
+          </Text>
 
           <Text style={styles.title}>
             Entrena para salvar vidas.
@@ -27,21 +87,26 @@ export default function WelcomeScreen() {
           </Text>
 
           <Text style={styles.description}>
-            Tu entrenamiento se adapta cada día a tu recuperación,
-            experiencia, tiempo disponible y equipo.
+            Tu entrenamiento se adapta cada día
+            a tu recuperación, experiencia,
+            tiempo disponible y equipo.
           </Text>
 
           <View style={styles.featureRow}>
             <View style={styles.featureDot} />
+
             <Text style={styles.featureText}>
-              Entrenamiento adaptativo para bomberos y bomberas.
+              Entrenamiento adaptativo para
+              bomberos y bomberas.
             </Text>
           </View>
 
           <View style={styles.featureRow}>
             <View style={styles.featureDot} />
+
             <Text style={styles.featureText}>
-              Misiones claras, seguras y explicables.
+              Misiones claras, seguras y
+              explicables.
             </Text>
           </View>
         </View>
@@ -49,12 +114,14 @@ export default function WelcomeScreen() {
         <View style={styles.actions}>
           <PrimaryButton
             label="Comenzar"
-            onPress={() => router.push('/login')}
+            onPress={() =>
+              router.push('/login')
+            }
           />
 
           <Text style={styles.legal}>
-            Sentinel Fire no sustituye atención médica ni determina
-            aptitud laboral.
+            Sentinel Fire no sustituye atención
+            médica ni determina aptitud laboral.
           </Text>
         </View>
       </View>
@@ -125,6 +192,12 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 12,
     lineHeight: 18,
+    textAlign: 'center',
+  },
+  logout: {
+    color: colors.brandCyan,
+    fontSize: 15,
+    fontWeight: '700',
     textAlign: 'center',
   },
 });

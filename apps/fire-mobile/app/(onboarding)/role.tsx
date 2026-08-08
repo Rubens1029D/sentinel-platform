@@ -14,11 +14,11 @@ import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { colors } from '@/theme/colors';
 import type { OperationalRole } from '@/types/onboarding';
 
-const roleOptions: Array<{
+const roleOptions: {
   value: OperationalRole;
   title: string;
   description: string;
-}> = [
+}[] = [
   {
     value: 'firefighter',
     title: 'Bombero o bombera',
