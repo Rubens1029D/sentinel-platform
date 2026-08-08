@@ -14,10 +14,10 @@ import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { colors } from '@/theme/colors';
 import type { InjuryArea } from '@/types/onboarding';
 
-const injuryOptions: Array<{
+const injuryOptions: {
   value: InjuryArea;
   title: string;
-}> = [
+}[] = [
   {
     value: 'knee',
     title: 'Rodilla',

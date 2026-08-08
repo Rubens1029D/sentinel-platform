@@ -16,7 +16,7 @@ type TextFieldProps = {
   value: string;
   onChangeText: (value: string) => void;
   secureTextEntry?: boolean;
-  keyboardType?: 'default' | 'email-address';
+  keyboardType?: 'default' | 'email-address' | 'numeric';
   autoCapitalize?: 'none' | 'sentences' | 'words';
   error?: string;
   onBlur?: () => void;
@@ -75,7 +75,7 @@ export function TextField({
             style={styles.eyeButton}
           >
             <Ionicons
-              color={colors.texuted}
+              color={colors.textMuted}
               name={isPasswordVisible ? 'eye-off-outline' : 'eye-outline'}
               size={23}
             />

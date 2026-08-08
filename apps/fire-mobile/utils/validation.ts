@@ -3,8 +3,8 @@ export const NAME_PATTERN = /^[A-Za-z]+(?: [A-Za-z]+)*$/;
 export const EMAIL_PATTERN =
   /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-export const PASSWORD_PATTERN =
-  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$/;
+  export const PASSWORD_PATTERN =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 
 export function validateName(value: string): string | undefined {
   const name = value.trim();
@@ -40,11 +40,11 @@ export function validateEmail(value: string): string | undefined {
 
 export function validatePassword(value: string): string | undefined {
   if (!value) {
-    return 'La contraseña ligatoria.';
+    return 'La contraseña es obligatoria.';
   }
 
-  if (value.length < 6) {
-    return 'Debe contener al menos 6 caracteres.';
+  if (value.length < 8) {
+    return 'Debe contener al menos 8 caracteres.';
   }
 
   if (!/[A-Z]/.test(value)) {

@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -13,6 +14,8 @@ import {
 import { BrandHeader } from '@/components/ui/BrandHeader';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { TextField } from '@/components/ui/TextField';
+import { ApiError } from '@/services/api/api-client';
+import { register } from '@/stores/auth-store';
 import { colors } from '@/theme/colors';
 import {
   validateEmail,
@@ -25,25 +28,44 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const [nameTouched, setNameTouched] = useState(false);
-  const [emailTouched, setEmailTouched] = useState(false);
-  const [passwordTouched, setPasswordTouched] = useState(false);
+  const [nameTouched, setNameTouched] =
+    useState(false);
+
+  const [emailTouched, setEmailTouched] =
+    useState(false);
+
+  const [
+    passwordTouched,
+    setPasswordTouched,
+  ] = useState(false);
+
+  const [isSubmitting, setIsSubmitting] =
+    useState(false);
 
   const nameError = validateName(name);
   const emailError = validateEmail(email);
-  const passwordError = validatePassword(password);
+  const passwordError =
+    validatePassword(password);
 
   const canSubmit =
     !nameError &&
     !emailError &&
-    !passwordError;
+    !passwordError &&
+    !isSubmitting;
 
-  const handleNameChange = (value: string) => {
-    const sanitizedValue = value.replace(/[^A-Za-z ]/g, '');
+  const handleNameChange = (
+    value: string,
+  ) => {
+    const sanitizedValue =
+      value.replace(
+        /[^A-Za-z ]/g,
+        '',
+      );
+
     setName(sanitizedValue);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setNameTouched(true);
     setEmailTouched(true);
     setPasswordTouched(true);
@@ -52,78 +74,170 @@ export default function RegisterScreen() {
       return;
     }
 
-    // En el siguiente incremento enviaremos estos datos a la API.
-   // console.log({
-     // name: name.trim(),
-      //email: email.trim().toLowerCase(),
-   // });
-    router.replace('/profile');
+    setIsSubmitting(true);
+
+    try {
+      await register({
+        name: name.trim(),
+        email: email
+          .trim()
+          .toLowerCase(),
+        password,
+      });
+
+      router.replace('/profile');
+    } catch (error) {
+      if (error instanceof ApiError) {
+        if (error.status === 409) {
+          Alert.alert(
+            'Cuenta existente',
+            'Ya existe una cuenta registrada con este correo electrónico.',
+          );
+
+          return;
+        }
+
+        if (error.status === 400) {
+          Alert.alert(
+            'Datos inválidos',
+            error.message,
+          );
+
+          return;
+        }
+
+        if (error.status === 429) {
+          Alert.alert(
+            'Demasiados intentos',
+            'Espera un momento antes de volver a intentar.',
+          );
+
+          return;
+        }
+
+        Alert.alert(
+          'Error',
+          error.message,
+        );
+
+        return;
+      }
+
+      Alert.alert(
+        'Sin conexión',
+        'No fue posible conectar con Sentinel. Verifica que el servidor esté disponible.',
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={
+          Platform.OS === 'ios'
+            ? 'padding'
+            : undefined
+        }
         style={styles.keyboard}
       >
         <ScrollView
-          contentContainerStyle={styles.container}
+          contentContainerStyle={
+            styles.container
+          }
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
             <BrandHeader compact />
 
-            <Text style={styles.title}>Crea tu cuenta</Text>
+            <Text style={styles.title}>
+              Crea tu cuenta
+            </Text>
 
             <Text style={styles.subtitle}>
-              Empecemos a preparar un plan adaptado a ti.
+              Empecemos a preparar un plan
+              adaptado a ti.
             </Text>
           </View>
 
           <View style={styles.form}>
             <TextField
               autoCapitalize="words"
-              error={nameTouched ? nameError : undefined}
+              error={
+                nameTouched ||
+                name.length > 0
+                  ? nameError
+                  : undefined
+              }
               label="Nombre"
-              onBlur={() => setNameTouched(true)}
-              onChangeText={handleNameChange}
+              onBlur={() =>
+                setNameTouched(true)
+              }
+              onChangeText={
+                handleNameChange
+              }
               placeholder="Tu nombre"
               value={name}
             />
 
             <TextField
-              error={emailTouched ? emailError : undefined}
+              error={
+                emailTouched ||
+                email.length > 0
+                  ? emailError
+                  : undefined
+              }
               keyboardType="email-address"
               label="Correo electrónico"
-              onBlur={() => setEmailTouched(true)}
+              onBlur={() =>
+                setEmailTouched(true)
+              }
               onChangeText={setEmail}
               placeholder="tu@correo.com"
               value={email}
             />
 
             <TextField
-              error={passwordTouched ? passwordError : undefined}
+              error={
+                passwordTouched ||
+                password.length > 0
+                  ? passwordError
+                  : undefined
+              }
               label="Contraseña"
-              onBlur={() => setPasswordTouched(true)}
-            onChangeText={setPassword}
+              onBlur={() =>
+                setPasswordTouched(true)
+              }
+              onChangeText={setPassword}
               placeholder="Mayúscula, minúscula y número"
               secureTextEntry
               value={password}
             />
 
             <Text style={styles.passwordHelp}>
-              Mínimo 6 caracteres, una mayúscula, una minúscula y un número.
+              Mínimo 8 caracteres, una
+              mayúscula, una minúscula y un
+              número.
             </Text>
 
             <PrimaryButton
               disabled={!canSubmit}
-              label="Crear cuenta"
-              onPress={handleSubmit}
+              label={
+                isSubmitting
+                  ? 'Creando cuenta...'
+                  : 'Crear cuenta'
+              }
+              onPress={() => {
+                void handleSubmit();
+              }}
             />
 
             <Text
               accessibilityRole="link"
-              onPress={() => router.back()}
+              onPress={() =>
+                router.back()
+              }
               style={styles.link}
             >
               Ya tengo cuenta

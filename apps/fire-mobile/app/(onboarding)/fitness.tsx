@@ -14,11 +14,11 @@ import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { colors } from '@/theme/colors';
 import type { FitnessLevel } from '@/types/onboarding';
 
-const fitnessOptions: Array<{
+const fitnessOptions: {
   value: FitnessLevel;
   title: string;
   description: string;
-}> = [
+}[] = [
   {
     value: 'very-low',
     title: 'Muy baja',

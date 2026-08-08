@@ -14,11 +14,11 @@ import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { colors } from '@/theme/colors';
 import type { Equipment } from '@/types/onboarding';
 
-const equipmentOptions: Array<{
+const equipmentOptions: {
   value: Equipment;
   title: string;
   description: string;
-}> = [
+}[] = [
   {
     value: 'scba',
     title: 'Equipo de respiración autónoma',

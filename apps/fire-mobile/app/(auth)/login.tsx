@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -13,6 +14,8 @@ import {
 import { BrandHeader } from '@/components/ui/BrandHeader';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { TextField } from '@/components/ui/TextField';
+import { ApiError } from '@/services/api/api-client';
+import { login } from '@/stores/auth-store';
 import { colors } from '@/theme/colors';
 import {
   validateEmail,
@@ -23,15 +26,29 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const [emailTouched, setEmailTouched] = useState(false);
-  const [passwordTouched, setPasswordTouched] = useState(false);
+  const [emailTouched, setEmailTouched] =
+    useState(false);
 
-  const emailError = validateEmail(email);
-  const passwordError = validatePassword(password);
+  const [
+    passwordTouched,
+    setPasswordTouched,
+  ] = useState(false);
 
-  const canSubmit = !emailError && !passwordError;
+  const [isSubmitting, setIsSubmitting] =
+    useState(false);
 
-  const handleSubmit = () => {
+  const emailError =
+    validateEmail(email);
+
+  const passwordError =
+    validatePassword(password);
+
+  const canSubmit =
+    !emailError &&
+    !passwordError &&
+    !isSubmitting;
+
+  const handleSubmit = async () => {
     setEmailTouched(true);
     setPasswordTouched(true);
 
@@ -39,42 +56,96 @@ export default function LoginScreen() {
       return;
     }
 
-    // La integración con la API se realizará en el siguiente incremento.
-    console.log({
-      email: email.trim().toLowerCase(),
-    });
+    setIsSubmitting(true);
+
+    try {
+      await login({
+        email: email
+          .trim()
+          .toLowerCase(),
+        password,
+      });
+
+      router.replace('/');
+    } catch (error) {
+      if (error instanceof ApiError) {
+        if (error.status === 401) {
+          Alert.alert(
+            'No pudimos iniciar sesión',
+            'Revisa tu correo y contraseña.',
+          );
+
+          return;
+        }
+
+        if (error.status === 429) {
+          Alert.alert(
+            'Demasiados intentos',
+            'Espera un momento antes de volver a intentar.',
+          );
+
+          return;
+        }
+
+        Alert.alert(
+          'Error',
+          error.message,
+        );
+
+        return;
+      }
+
+      Alert.alert(
+        'Sin conexión',
+        'No fue posible conectar con Sentinel. Verifica que el servidor esté disponible.',
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={
+          Platform.OS === 'ios'
+            ? 'padding'
+            : undefined
+        }
         style={styles.keyboard}
       >
         <ScrollView
-          contentContainerStyle={styles.container}
+          contentContainerStyle={
+            styles.container
+          }
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
             <BrandHeader compact />
 
-            <Text style={styles.title}>Bienvenido de nuevo</Text>
+            <Text style={styles.title}>
+              Bienvenido de nuevo
+            </Text>
 
             <Text style={styles.subtitle}>
-              Inicia sesión para continuar con tu preparación.
+              Inicia sesión para continuar
+              con tu preparación.
             </Text>
           </View>
 
           <View style={styles.form}>
             <TextField
-            error={
-              emailTouched || email.length > 0
-                ? emailError
-                : undefined
-            }
+              error={
+                emailTouched ||
+                email.length > 0
+                  ? emailError
+                  : undefined
+              }
               keyboardType="email-address"
               label="Correo electrónico"
-            lur={() => setEmailTouched(true)}
+              onBlur={() =>
+                setEmailTouched(true)
+              }
               onChangeText={setEmail}
               placeholder="tu@correo.com"
               value={email}
@@ -82,12 +153,15 @@ export default function LoginScreen() {
 
             <TextField
               error={
-                passwordTouched || password.length > 0
+                passwordTouched ||
+                password.length > 0
                   ? passwordError
                   : undefined
               }
               label="Contraseña"
-              onBlur={() => setPasswordTouched(true)}
+              onBlur={() =>
+                setPasswordTouched(true)
+              }
               onChangeText={setPassword}
               placeholder="Mayúscula, minúscula y número"
               secureTextEntry
@@ -96,23 +170,34 @@ export default function LoginScreen() {
 
             <PrimaryButton
               disabled={!canSubmit}
-              label="Iniciar sesión"
-              onPress={handleSubmit}
+              label={
+                isSubmitting
+                  ? 'Iniciando sesión...'
+                  : 'Iniciar sesión'
+              }
+              onPress={() => {
+                void handleSubmit();
+              }}
             />
 
             <Text
               accessibilityRole="link"
-              onPress={() => router.push('/register')}
+              onPress={() =>
+                router.push('/register')
+              }
               style={styles.link}
             >
-              ¿Aún no tienes cuenta? Crear cuenta
+              ¿Aún no tienes cuenta? Crear
+              cuenta
             </Text>
           </View>
 
           <Text
             accessibilityRole="link"
-            onPress={() => router.replace('/')}
-     style={styles.back}
+            onPress={() =>
+              router.replace('/')
+            }
+            style={styles.back}
           >
             Volver
           </Text>
