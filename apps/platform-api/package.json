@@ -21,7 +21,8 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "db:seed:exercises": "tsx src/database/seeds/exercises.seed.ts"
+    "db:seed:exercises": "tsx src/database/seeds/exercises.seed.ts",
+    "test:e2e:cov": "jest --config ./test/jest-e2e.json --coverage --coverageDirectory=../coverage-e2e"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
